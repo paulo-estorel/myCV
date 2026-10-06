@@ -29,26 +29,38 @@ function linkAction(){
 }
 navLink.forEach(n => n.addEventListener('click', linkAction))
 
-/*==================== ACCORDION SKILLS ====================*/
-const skillsContent = document.getElementsByClassName('skills__content'),
-      skillsHeader = document.querySelectorAll('.skills__header')
+/*==================== SKILLS CATEGORY FILTER ====================*/
+const skillsFilterBtns = document.querySelectorAll('.skills__filter-btn');
+const skillsCards = document.querySelectorAll('.skills__card');
 
-function toggleSkills(){
-    let itemClass = this.parentNode.className
+if (skillsFilterBtns.length > 0 && skillsCards.length > 0) {
+    skillsFilterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active filter button
+            skillsFilterBtns.forEach(b => {
+                b.classList.remove('skills__filter--active');
+                b.setAttribute('aria-selected', 'false');
+            });
+            btn.classList.add('skills__filter--active');
+            btn.setAttribute('aria-selected', 'true');
 
-    for(i = 0; i < skillsContent.length; i++){
-        skillsContent[i].className = 'skills__content skills__close'
-    }
+            const filterValue = btn.getAttribute('data-filter');
 
-    if(itemClass === 'skills__content skills__close'){
-        this.parentNode.className = 'skills__content skills__open'
-    }
+            skillsCards.forEach(card => {
+                const categories = card.getAttribute('data-category') ? card.getAttribute('data-category').split(' ') : [];
+                if (filterValue === 'all' || categories.includes(filterValue)) {
+                    card.classList.remove('skills__card--hidden');
+                    // Reset and replay entrance animation
+                    card.style.animation = 'none';
+                    card.offsetHeight; // trigger reflow
+                    card.style.animation = '';
+                } else {
+                    card.classList.add('skills__card--hidden');
+                }
+            });
+        });
+    });
 }
-
-skillsHeader.forEach((el)  =>{
-    el.addEventListener('click', toggleSkills)
-
-})
 
 /*==================== QUALIFICATION TABS ====================*/
 const tabs = document.querySelectorAll('[data-target]'),
@@ -137,10 +149,13 @@ function scrollActive(){
         const sectionTop = current.offsetTop - 50;
         sectionId = current.getAttribute('data-id')
 
-        if(scrollY > sectionTop && scrollY <= sectionTop + sectionHeight){
-            document.querySelector('.nav__menu a[href*=' + sectionId + ']').classList.add('active-link')
-        }else{
-            document.querySelector('.nav__menu a[href*=' + sectionId + ']').classList.remove('active-link')
+        const sectionLink = document.querySelector('.nav__menu a[href*=' + sectionId + ']')
+        if (sectionLink) {
+            if(scrollY > sectionTop && scrollY <= sectionTop + sectionHeight){
+                sectionLink.classList.add('active-link')
+            }else{
+                sectionLink.classList.remove('active-link')
+            }
         }
     })
 }
@@ -261,4 +276,46 @@ function SendMail(){
         // alert("Your message has been sent successfully!");
         swal("Success!", "Your message has been sent!", "success");
     })
+}
+
+/*==================== PROFILE PHOTO SWITCH ====================*/
+const profileToggle = document.getElementById('home-profile-toggle');
+if (profileToggle) {
+    const photo1 = document.getElementById('profile-photo-1');
+    const photo2 = document.getElementById('profile-photo-2');
+
+    function switchProfilePhoto(e) {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.type === 'keydown') e.preventDefault();
+
+        if (photo1 && photo2) {
+            photo1.classList.toggle('home__photo--active');
+            photo2.classList.toggle('home__photo--active');
+        }
+    }
+
+    profileToggle.addEventListener('click', switchProfilePhoto);
+    profileToggle.addEventListener('keydown', switchProfilePhoto);
+
+    profileToggle.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    profileToggle.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            fetch('/api/upload-photo2', {
+                method: 'POST',
+                body: file
+            }).then(res => res.json()).then(data => {
+                if (data.success && photo2) {
+                    photo2.src = 'assets/img/photo2.jpg?v=' + Date.now();
+                    if (photo1) photo1.classList.remove('home__photo--active');
+                    photo2.classList.add('home__photo--active');
+                }
+            }).catch(console.error);
+        }
+    });
 }
